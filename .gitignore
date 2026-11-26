@@ -2,3 +2,4 @@
 *.vdi
 data/*-passwoerter*.csv
 *.log
+glpi/.env

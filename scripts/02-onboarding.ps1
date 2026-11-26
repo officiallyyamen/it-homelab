@@ -95,6 +95,7 @@ foreach ($row in $rows) {
             Department            = $row.Abteilung
             Title                 = $row.Funktion
             Company               = $Firma
+            ScriptPath            = 'netzlaufwerke.cmd'
             AccountPassword       = (ConvertTo-SecureString $passwort -AsPlainText -Force)
             ChangePasswordAtLogon = $true
             Enabled               = $true

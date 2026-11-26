@@ -1,0 +1,38 @@
+# GLPI (Helpdesk + Inventar) auf LNX01, erreichbar unter http://10.10.10.20:8080
+# Passwort steht in .env (nicht im Repository): DB_PASSWORD=...
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+      MARIADB_DATABASE: glpi
+      MARIADB_USER: glpi
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      retries: 10
+
+  glpi:
+    image: glpi/glpi:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      GLPI_DB_HOST: db
+      GLPI_DB_PORT: 3306
+      GLPI_DB_NAME: glpi
+      GLPI_DB_USER: glpi
+      GLPI_DB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - glpi:/var/glpi
+
+volumes:
+  db:
+  glpi:
