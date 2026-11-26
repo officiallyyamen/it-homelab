@@ -17,7 +17,10 @@ Netz: VirtualBox-NAT-Netzwerk `LabNAT`, 10.10.10.0/24, Gateway 10.10.10.1. Domä
 - [x] DC01 installiert (Server Core), feste IP, Domäne `lab.local` angelegt
 - [x] OU-Struktur, Abteilungs- und Berechtigungsgruppen nach AGDLP ([01-ad-struktur.ps1](scripts/01-ad-struktur.ps1))
 - [x] Onboarding-Skript: neue Mitarbeitende aus CSV anlegen ([02-onboarding.ps1](scripts/02-onboarding.ps1))
-- [ ] Gruppenrichtlinien: Netzlaufwerk, Passwortrichtlinie, Sperrbildschirm
+- [x] Passwortrichtlinie und Gruppenrichtlinien: Hintergrundbild, Bildschirmsperre, Firewall, Windows Update ([03-gruppenrichtlinien.ps1](scripts/03-gruppenrichtlinien.ps1))
+- [x] DNS-Weiterleitung und DHCP für Arbeitsplätze ([04-dns-dhcp.ps1](scripts/04-dns-dhcp.ps1))
+- [x] Offboarding: Konto sperren, Gruppen entfernen, protokollieren ([05-offboarding.ps1](scripts/05-offboarding.ps1))
+- [ ] Netzlaufwerke je Abteilung per Gruppenrichtlinie (nach LNX01)
 - [ ] CL01 in die Domäne aufnehmen
 - [ ] LNX01: Samba als Domänenmitglied, Abteilungsfreigaben
 - [ ] GLPI: Tickets, Inventar über Agent, Wissensdatenbank
@@ -66,3 +69,31 @@ Das Skript
 
 ![Probelauf](docs/screenshots/02-onboarding-whatif.png)
 ![Onboarding](docs/screenshots/02-onboarding.png)
+
+## Gruppenrichtlinien
+
+| Was | Wo | Wirkung |
+|---|---|---|
+| Domänen-Passwortrichtlinie | Domäne | mind. 12 Zeichen, Komplexität, Verlauf 10, Sperre nach 5 Fehlversuchen für 15 Minuten |
+| `U - Arbeitsplatz` | OU Benutzer | Firmen-Hintergrundbild aus `NETLOGON`, Bildschirmsperre mit Passwort nach 10 Minuten |
+| `C - Sicherheit` | OU Computer | Windows-Firewall in allen Profilen an, Windows Update installiert automatisch um 03:00 |
+
+GPO-Namen beginnen mit `U -` (Benutzerkonfiguration) oder `C -` (Computerkonfiguration), damit man in der Verwaltung sofort sieht, wo sie wirken.
+
+![Gruppenrichtlinien](docs/screenshots/03-gruppenrichtlinien.png)
+
+## DNS und DHCP
+
+DC01 löst `lab.local` selbst auf und leitet alles andere an 1.1.1.1 und 9.9.9.9 weiter. Neue Arbeitsplätze bekommen per DHCP eine Adresse aus 10.10.10.100–200 sowie Gateway, DNS-Server und Domänensuffix, damit sie ohne Handarbeit der Domäne beitreten können.
+
+![DNS und DHCP](docs/screenshots/04-dns-dhcp.png)
+
+## Offboarding
+
+```powershell
+.\scripts\05-offboarding.ps1 -Benutzer lukas.huber2 -Ticket 1042
+```
+
+Das Konto wird gesperrt, bekommt ein zufälliges Passwort, verliert alle Gruppen (die vorher protokolliert werden) und wandert in die OU `Deaktiviert`. Gelöscht wird nicht, damit Daten und Postfach geordnet übergeben werden können. Das Protokoll mit Ticketnummer landet monatsweise unter `C:\IT\Offboarding`.
+
+![Offboarding](docs/screenshots/05-offboarding.png)
