@@ -3,3 +3,4 @@
 data/*-passwoerter*.csv
 *.log
 glpi/.env
+glpi/lab-root-ca.pem

@@ -24,7 +24,9 @@ Netz: VirtualBox-NAT-Netzwerk `LabNAT`, 10.10.10.0/24, Gateway 10.10.10.1. Domä
 - [ ] CL01 in die Domäne aufnehmen
 - [x] LNX01: Samba als Domänenmitglied, Abteilungsfreigaben ([linux/](linux/))
 - [x] DC01 als Zeitquelle der Domäne ([07-zeitserver.ps1](scripts/07-zeitserver.ps1))
-- [ ] GLPI: Tickets, Inventar über Agent, Wissensdatenbank
+- [x] GLPI: Benutzer aus dem AD (LDAPS), Ticket-Kategorien, Wissensdatenbank, Beispieltickets ([glpi/](glpi/))
+- [x] Zertifizierungsstelle auf DC01, LDAPS für GLPI ([09-zertifizierungsstelle.ps1](scripts/09-zertifizierungsstelle.ps1))
+- [ ] GLPI-Agent auf CL01: Inventar
 - [ ] Teil der Infrastruktur per Terraform
 
 ## Struktur im Active Directory
@@ -116,3 +118,23 @@ Zwei Fehler, die beim Aufbau aufgetreten sind:
 - **DNS:** cloud-init trägt `127.0.1.1 lnx01` in `/etc/hosts` ein, und Samba hat die Docker-Netze mit im DNS registriert. Lösung: echte IP in `/etc/hosts`, Samba nur auf `enp0s3`.
 
 ![Abteilungsfreigaben vom DC aus beschrieben](docs/screenshots/07-samba-freigaben.png)
+
+## Helpdesk mit GLPI
+
+GLPI läuft auf LNX01 in Docker ([docker-compose.yml](glpi/docker-compose.yml)) und liest die Benutzer direkt aus dem AD. Wer im Onboarding angelegt wird, kann also sofort Tickets melden.
+
+- **Anbindung ans AD:** Ein eigenes Dienstkonto `svc-glpi` mit reinen Leserechten ([08-glpi-dienstkonto.ps1](scripts/08-glpi-dienstkonto.ps1)). Windows Server 2025 lehnt ungeschützte LDAP-Anmeldungen ab. Statt diese Vorgabe zu lockern, hat DC01 eine Unternehmens-CA bekommen, und GLPI spricht LDAPS auf Port 636 und vertraut dieser CA ([ldap.py](glpi/ldap.py)).
+- **Inhalte per API:** [seed.py](glpi/seed.py) legt Ticket-Kategorien, vier Anleitungen für die Wissensdatenbank (Konto entsperren, P: fehlt, Onboarding, Offboarding) und Beispieltickets an. Das Skript lässt sich beliebig oft ausführen.
+
+```bash
+docker compose up -d                                   # auf LNX01
+GLPI_PASS=... LDAP_PASS_FILE=svc-glpi.txt python ldap.py
+docker exec glpi-glpi-1 php bin/console ldap:synchronize_users -c
+GLPI_PASS=... python seed.py
+```
+
+![Tickets mit Meldern aus dem AD](docs/screenshots/08-glpi-tickets.png)
+
+![Anleitungen in der Wissensdatenbank](docs/screenshots/09-glpi-wissensdatenbank.png)
+
+![Benutzer aus dem AD importiert](docs/screenshots/10-glpi-benutzer-aus-ad.png)
