@@ -1,0 +1,17 @@
+ui:
+  title: Lab-Status
+  header: lab.local
+endpoints:
+%{ for c in checks ~}
+  - name: "${c.name}"
+    group: "${c.group}"
+    url: "${c.url}"
+    interval: 1m
+    conditions:
+%{ if startswith(c.url, "http") ~}
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 2000"
+%{ else ~}
+      - "[CONNECTED] == true"
+%{ endif ~}
+%{ endfor ~}

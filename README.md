@@ -27,7 +27,7 @@ Netz: VirtualBox-NAT-Netzwerk `LabNAT`, 10.10.10.0/24, Gateway 10.10.10.1. Domä
 - [x] GLPI: Benutzer aus dem AD (LDAPS), Ticket-Kategorien, Wissensdatenbank, Beispieltickets ([glpi/](glpi/))
 - [x] Zertifizierungsstelle auf DC01, LDAPS für GLPI ([09-zertifizierungsstelle.ps1](scripts/09-zertifizierungsstelle.ps1))
 - [ ] GLPI-Agent auf CL01: Inventar
-- [ ] Teil der Infrastruktur per Terraform
+- [x] Monitoring per Terraform: Gatus prüft DC01 und LNX01 ([terraform/](terraform/))
 
 ## Struktur im Active Directory
 
@@ -138,3 +138,16 @@ GLPI_PASS=... python seed.py
 ![Anleitungen in der Wissensdatenbank](docs/screenshots/09-glpi-wissensdatenbank.png)
 
 ![Benutzer aus dem AD importiert](docs/screenshots/10-glpi-benutzer-aus-ad.png)
+
+## Monitoring per Terraform
+
+Terraform legt auf LNX01 einen Monitoring-Container ([Gatus](https://github.com/TwiN/gatus)) an und schreibt dessen Konfiguration. Was geprüft wird, steht als Liste in [variables.tf](terraform/variables.tf): DNS, Kerberos und LDAPS auf DC01, SMB und GLPI auf LNX01. Ein neuer Dienst ist eine Zeile mehr und ein `terraform apply`.
+
+```bash
+cd terraform
+terraform init
+terraform apply      # Statusseite: http://lnx01.lab.local:8081
+terraform destroy    # Monitoring wieder entfernen
+```
+
+![Statusseite](docs/screenshots/11-monitoring-terraform.png)
