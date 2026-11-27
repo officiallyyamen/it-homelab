@@ -21,12 +21,14 @@ Netz: VirtualBox-NAT-Netzwerk `LabNAT`, 10.10.10.0/24, Gateway 10.10.10.1. Domä
 - [x] DNS-Weiterleitung und DHCP für Arbeitsplätze ([04-dns-dhcp.ps1](scripts/04-dns-dhcp.ps1))
 - [x] Offboarding: Konto sperren, Gruppen entfernen, protokollieren ([05-offboarding.ps1](scripts/05-offboarding.ps1))
 - [x] Netzlaufwerk P: je Abteilung per Anmeldeskript ([06-netzlaufwerke.ps1](scripts/06-netzlaufwerke.ps1))
-- [ ] CL01 in die Domäne aufnehmen
+- [x] CL01 (Windows 11) per Offline-Join in die Domäne ([10-client-beitritt.ps1](scripts/10-client-beitritt.ps1))
 - [x] LNX01: Samba als Domänenmitglied, Abteilungsfreigaben ([linux/](linux/))
 - [x] DC01 als Zeitquelle der Domäne ([07-zeitserver.ps1](scripts/07-zeitserver.ps1))
 - [x] GLPI: Benutzer aus dem AD (LDAPS), Ticket-Kategorien, Wissensdatenbank, Beispieltickets ([glpi/](glpi/))
 - [x] Zertifizierungsstelle auf DC01, LDAPS für GLPI ([09-zertifizierungsstelle.ps1](scripts/09-zertifizierungsstelle.ps1))
-- [ ] GLPI-Agent auf CL01: Inventar
+- [x] GLPI-Agent als Dienst auf CL01, Anmeldung per Basic Auth ([11-glpi-agent.ps1](scripts/11-glpi-agent.ps1))
+- [ ] Erstes vollständiges Inventar von CL01 in GLPI
+- [ ] Anmeldung als Domänenbenutzer auf CL01: Hintergrundbild, Sperre, Laufwerk P: prüfen
 - [x] Monitoring per Terraform: Gatus prüft DC01 und LNX01 ([terraform/](terraform/))
 
 ## Struktur im Active Directory
@@ -138,6 +140,15 @@ GLPI_PASS=... python seed.py
 ![Anleitungen in der Wissensdatenbank](docs/screenshots/09-glpi-wissensdatenbank.png)
 
 ![Benutzer aus dem AD importiert](docs/screenshots/10-glpi-benutzer-aus-ad.png)
+
+## Arbeitsplatz CL01
+
+Windows 11 Enterprise, unbeaufsichtigt installiert. Zwei Stolpersteine unter VirtualBox mit aktivem Hyper-V auf dem Host:
+
+- Mit EFI und 2 CPUs bleibt die VM beim Start hängen, mit 1 CPU lehnt das neue Setup ab („two or more cores“). Lösung: BIOS-Firmware mit 2 CPUs; die Hardware-Prüfungen umgeht die Antwortdatei per `LabConfig`.
+- Die BIOS-Vorlage von VirtualBox legt die Partition an, formatiert sie aber nicht und markiert sie nicht als aktiv. Die Antwortdatei braucht dafür einen eigenen `ModifyPartitions`-Block.
+
+Der Beitritt läuft wie bei LNX01 offline: `djoin /provision` auf DC01, dann [10-client-beitritt.ps1](scripts/10-client-beitritt.ps1) auf dem Client. Seit GLPI 12 müssen sich Agenten anmelden; das Lab nutzt dafür ein eigenes Konto `inventar` mit Basic Auth.
 
 ## Monitoring per Terraform
 
