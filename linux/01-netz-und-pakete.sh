@@ -24,7 +24,8 @@ rm -f /etc/netplan/00-installer-config.yaml /etc/netplan/50-cloud-init.yaml
 netplan apply
 
 hostnamectl set-hostname lnx01
-grep -q 'lnx01.lab.local' /etc/hosts || sed -i "1i ${IP} lnx01.lab.local lnx01" /etc/hosts
+sed -i '/lnx01/d' /etc/hosts && sed -i "1i ${IP} lnx01.lab.local lnx01" /etc/hosts
+echo 'manage_etc_hosts: false' > /etc/cloud/cloud.cfg.d/99-hosts.cfg
 
 timedatectl set-timezone Europe/Vienna
 sed -i 's/^#\?NTP=.*/NTP=dc01.lab.local/' /etc/systemd/timesyncd.conf

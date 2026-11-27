@@ -20,9 +20,10 @@ Netz: VirtualBox-NAT-Netzwerk `LabNAT`, 10.10.10.0/24, Gateway 10.10.10.1. Domä
 - [x] Passwortrichtlinie und Gruppenrichtlinien: Hintergrundbild, Bildschirmsperre, Firewall, Windows Update ([03-gruppenrichtlinien.ps1](scripts/03-gruppenrichtlinien.ps1))
 - [x] DNS-Weiterleitung und DHCP für Arbeitsplätze ([04-dns-dhcp.ps1](scripts/04-dns-dhcp.ps1))
 - [x] Offboarding: Konto sperren, Gruppen entfernen, protokollieren ([05-offboarding.ps1](scripts/05-offboarding.ps1))
-- [ ] Netzlaufwerke je Abteilung per Gruppenrichtlinie (nach LNX01)
+- [x] Netzlaufwerk P: je Abteilung per Anmeldeskript ([06-netzlaufwerke.ps1](scripts/06-netzlaufwerke.ps1))
 - [ ] CL01 in die Domäne aufnehmen
-- [ ] LNX01: Samba als Domänenmitglied, Abteilungsfreigaben
+- [x] LNX01: Samba als Domänenmitglied, Abteilungsfreigaben ([linux/](linux/))
+- [x] DC01 als Zeitquelle der Domäne ([07-zeitserver.ps1](scripts/07-zeitserver.ps1))
 - [ ] GLPI: Tickets, Inventar über Agent, Wissensdatenbank
 - [ ] Teil der Infrastruktur per Terraform
 
@@ -97,3 +98,21 @@ DC01 löst `lab.local` selbst auf und leitet alles andere an 1.1.1.1 und 9.9.9.9
 Das Konto wird gesperrt, bekommt ein zufälliges Passwort, verliert alle Gruppen (die vorher protokolliert werden) und wandert in die OU `Deaktiviert`. Gelöscht wird nicht, damit Daten und Postfach geordnet übergeben werden können. Das Protokoll mit Ticketnummer landet monatsweise unter `C:\IT\Offboarding`.
 
 ![Offboarding](docs/screenshots/05-offboarding.png)
+
+## Dateiserver LNX01
+
+Ubuntu 24.04 ist per Samba Mitglied von `lab.local` (winbind, `idmap rid`). Jede Abteilung hat eine Freigabe unter `/srv/freigaben/<Abteilung>`. Wer lesen und wer schreiben darf, steht nicht auf dem Linux-Server, sondern in den Gruppen `DL_Share_<Abteilung>_RW` und `_R` im AD. Ein neuer Mitarbeiter bekommt Zugriff also allein über das Onboarding.
+
+Der Server tritt offline bei: Auf DC01 erzeugt `djoin /provision` eine Datei, `02-samba-domaenenmitglied.sh lnx01.djoin` liest sie ein. So muss kein Admin-Passwort auf den Linux-Server.
+
+```bash
+sudo ./01-netz-und-pakete.sh
+sudo ./02-samba-domaenenmitglied.sh lnx01.djoin
+```
+
+Zwei Fehler, die beim Aufbau aufgetreten sind:
+
+- **Uhrzeit:** DC01 ging 16 Minuten nach, Kerberos lehnt ab 5 Minuten ab. Lösung: DC01 holt die Zeit aus dem Internet und ist Zeitquelle für alle anderen ([07-zeitserver.ps1](scripts/07-zeitserver.ps1)).
+- **DNS:** cloud-init trägt `127.0.1.1 lnx01` in `/etc/hosts` ein, und Samba hat die Docker-Netze mit im DNS registriert. Lösung: echte IP in `/etc/hosts`, Samba nur auf `enp0s3`.
+
+![Abteilungsfreigaben vom DC aus beschrieben](docs/screenshots/07-samba-freigaben.png)

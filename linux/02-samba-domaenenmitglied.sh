@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # LNX01 als Mitglied der Domaene lab.local (Samba + Winbind), Abteilungsfreigaben mit AD-Gruppen
-# Aufruf: sudo ./02-samba-domaenenmitglied.sh   (fragt einmal nach dem Passwort von LAB\Administrator)
+# Aufruf: sudo ./02-samba-domaenenmitglied.sh              (fragt nach dem Passwort von LAB\Administrator)
+#    oder: sudo ./02-samba-domaenenmitglied.sh lnx01.djoin  (Offline-Beitritt mit Datei aus 'djoin /provision' auf dem DC)
 set -euo pipefail
 ABTEILUNGEN=(Geschaeftsfuehrung IT Vertrieb Buchhaltung Technik)
 BASIS=/srv/freigaben
@@ -17,6 +18,8 @@ cat <<SMB
 [global]
     workgroup = LAB
     realm = LAB.LOCAL
+    interfaces = lo enp0s3
+    bind interfaces only = yes
     security = ads
     netbios name = LNX01
     idmap config * : backend = tdb
@@ -49,7 +52,11 @@ done
 } > /etc/samba/smb.conf
 testparm -s >/dev/null
 
-net ads join -U Administrator
+if [[ -n "${1:-}" ]]; then
+    net offlinejoin requestodj loadfile="$1"
+else
+    net ads join -U Administrator
+fi
 sed -i 's/^passwd:.*/passwd:         files systemd winbind/; s/^group:.*/group:          files systemd winbind/' /etc/nsswitch.conf
 systemctl enable --now winbind smbd nmbd
 systemctl restart winbind smbd
